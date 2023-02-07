@@ -4,8 +4,8 @@
 #include <array>
 #include <functional>
 #include <initializer_list>
-#include <string>
 #include <sstream>
+#include <string>
 
 template <typename T, std::size_t D>
 class Point : public std::array<T, D>
@@ -44,33 +44,40 @@ inline Point<T, D>::~Point()
 template <typename T, std::size_t D>
 inline Point<T, D>::Point(std::initializer_list<T> &&v)
 {
-    size_t i = 0;
-    for(const T &elem : v)
+    std::size_t i = 0;
+    for (const T &elem : v)
     {
         (*this)[i++] = elem;
-        if(i >= D) break; 
+        if (i >= D)
+            break;
     }
 }
 
 template <typename T, std::size_t D>
 inline Point<T, D> &Point<T, D>::operator+=(const Point<T, D> &rhs)
 {
-    std::transform(this->begin(), this->end(), rhs.begin(), this->begin(), std::plus<T>());
+    std::transform(this->begin(), this->end(), rhs.begin(),
+                   this->begin(), std::plus<T>());
     return *this;
 }
 
 template <typename T, std::size_t D>
 inline Point<T, D> &Point<T, D>::operator-=(const Point<T, D> &rhs)
 {
-    std::transform(this->begin(), this->end(), rhs.begin(), this->begin(), std::minus<T>());
+    std::transform(this->begin(), this->end(), rhs.begin(),
+                   this->begin(), std::minus<T>());
     return *this;
 }
 
 template <typename T, std::size_t D>
 inline Point<T, D> &Point<T, D>::operator*=(const T &rhs)
 {
-    std::transform(this->begin(), this->end(), this->begin(), [&](const T &x) -> T
-              { return x * rhs; });
+    std::transform(
+        this->begin(), this->end(), this->begin(),
+        [&](const T &x) -> T
+        {
+            return x * rhs;
+        });
     return *this;
 }
 
@@ -92,7 +99,7 @@ inline const std::string Point<T, D>::toString() const
     std::ostringstream res;
     res << "{";
     typename Point<T, D>::const_iterator it;
-    for(it = this->cbegin(); it < this->cend() - 1; it++)
+    for (it = this->cbegin(); it < this->cend() - 1; it++)
     {
         res << " " << (*it) << ",";
     }
@@ -126,7 +133,7 @@ struct std::hash<Point<T, D>>
 };
 
 template <typename T, std::size_t D>
-std::ostream& operator<< (std::ostream& stream, const Point<T,D>& pt)
+std::ostream &operator<<(std::ostream &stream, const Point<T, D> &pt)
 {
     return stream << pt.toString();
 }
