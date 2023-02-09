@@ -103,7 +103,7 @@ inline const std::string Point<T, D>::toString() const
     {
         res << " " << (*it) << ",";
     }
-    res << " " << (*(++it)) << "}";
+    res << " " << (*it) << "}";
     return res.str();
 }
 
