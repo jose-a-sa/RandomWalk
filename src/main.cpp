@@ -4,20 +4,25 @@
 
 #include "RandomWalk.hpp"
 
-std::vector<double> sample_stats(std::vector<std::size_t> x)
+std::vector<double> sample_stats(std::vector<int> x, std::function<bool(int)> outlier)
 {
-    std::size_t n = x.size();
-
     std::vector<double> res(3, 0);
 
-    double mean = std::accumulate(x.begin(), x.end(), 0.0) / static_cast<double>(n);
-    res[1] = mean;
+    std::size_t n = 0;
+    int mom1 = 0, mom2 = 0;
 
-    double variance = std::accumulate(x.begin(), x.end(), -mean * mean * static_cast<double>(n),
-                                      [&](double acc, double x)
-                                      { return acc + x * x; });
-    variance /= (static_cast<double>(n) - 1.0);
-    res[2] = variance;
+    for(auto xi : x)
+    {
+        if(!outlier(xi))
+        {
+            n++;
+            mom1 += xi;
+            mom2 += xi*xi;
+        }
+    }
+    
+    res[1] = mom1 / static_cast<double>(n);
+    res[2] = (mom2 - static_cast<double>(n)*res[1]*res[1] ) / (static_cast<double>(n) - 1.0);
 
     return res;
 }
@@ -30,8 +35,8 @@ int main()
         return std::abs(pt[0]) >= 2 || std::abs(pt[1]) >= 2;
     };
 
-    std::vector<std::size_t> times = walker.walkWhileSample(100000, boundary1);
-    std::vector<double> cm = sample_stats(times);
+    auto times = walker.walkWhileSample(100000, boundary1);
+    std::vector<double> cm = sample_stats(times, [](int x) -> bool {return x < 0;});
     std::cout << cm[1] << " ± " << sqrt(cm[2]) << std::endl;
 
     return 0;

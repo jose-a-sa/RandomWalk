@@ -6,7 +6,7 @@
 
 #include "Point.hpp"
 
-template<std::size_t D>
+template <std::size_t D>
 class RandomWalk
 {
 private:
@@ -19,16 +19,16 @@ private:
 
 public:
     RandomWalk();
-    explicit RandomWalk(const Point<int, D>& dx);
-    RandomWalk(const Point<Point<std::size_t, 2>, D>& weights, const Point<int, D>& dx);
+    explicit RandomWalk(const Point<int, D> &dx);
+    RandomWalk(const Point<Point<std::size_t, 2>, D> &weights, const Point<int, D> &dx);
     ~RandomWalk();
-    Point<std::size_t, 2> random_direction();
-    std::size_t walkWhile(std::function<bool(Point<int, D>)> boundary, std::size_t max_iter = -1);
-    std::vector<std::size_t>
+    std::pair<std::size_t, int> random_direction();
+    int walkWhile(std::function<bool(Point<int, D>)> boundary, std::size_t max_iter = -1);
+    std::vector<int>
     walkWhileSample(std::size_t sample_size, std::function<bool(Point<int, D>)> boundary, std::size_t max_iter = -1);
 };
 
-template<std::size_t D>
+template <std::size_t D>
 inline Point<Point<std::size_t, 2>, D> RandomWalk<D>::uniform_weights_()
 {
     Point<Point<std::size_t, 2>, D> res;
@@ -36,7 +36,7 @@ inline Point<Point<std::size_t, 2>, D> RandomWalk<D>::uniform_weights_()
     return res;
 }
 
-template<std::size_t D>
+template <std::size_t D>
 inline void RandomWalk<D>::init_rand_()
 {
     std::random_device rd;
@@ -44,33 +44,33 @@ inline void RandomWalk<D>::init_rand_()
     this->dist_ = std::uniform_real_distribution<double>(0.0, 1.0);
 }
 
-template<std::size_t D>
+template <std::size_t D>
 inline RandomWalk<D>::RandomWalk()
     : RandomWalk<D>::RandomWalk(uniform_weights_(), Point<int, D>(1))
 {
 }
 
-template<std::size_t D>
-inline RandomWalk<D>::RandomWalk(const Point<int, D>& dx)
+template <std::size_t D>
+inline RandomWalk<D>::RandomWalk(const Point<int, D> &dx)
     : RandomWalk<D>::RandomWalk(uniform_weights_(), dx)
 {
 }
 
-template<std::size_t D>
-inline RandomWalk<D>::RandomWalk(const Point<Point<std::size_t, 2>, D>& weights, const Point<int, D>& dxx)
+template <std::size_t D>
+inline RandomWalk<D>::RandomWalk(const Point<Point<std::size_t, 2>, D> &weights, const Point<int, D> &dxx)
     : dx(std::move(dxx))
 {
     init_rand_();
 
     std::size_t n = accumulate(
         weights.begin(), weights.end(), 0,
-        [](const std::size_t& acc, const Point<std::size_t, 2>& w) -> std::size_t
+        [](const std::size_t &acc, const Point<std::size_t, 2> &w) -> std::size_t
         {
             return acc + w[0] + w[1];
         });
     this->cdf = std::array<double, 2 * D + 1>();
     this->cdf.fill(0);
-    for(std::size_t i = 0; i < 2 * D; i++)
+    for (std::size_t i = 0; i < 2 * D; i++)
     {
         std::size_t dim = i >> 1, dir = i % 2;
         std::size_t w = (dir == 0) ? weights[dim][0] : weights[dim][1];
@@ -78,55 +78,52 @@ inline RandomWalk<D>::RandomWalk(const Point<Point<std::size_t, 2>, D>& weights,
     }
 }
 
-template<std::size_t D>
-inline RandomWalk<D>::~RandomWalk()
-= default;
+template <std::size_t D>
+inline RandomWalk<D>::~RandomWalk() = default;
 
-template<std::size_t D>
-inline Point<std::size_t, 2> RandomWalk<D>::random_direction()
+template <std::size_t D>
+inline std::pair<std::size_t, int> RandomWalk<D>::random_direction()
 {
     double p = this->dist_(this->generator_);
 
-    for(std::size_t i = 0; i < 2 * D; i++)
+    for (std::size_t i = 0; i < 2 * D; i++)
     {
-        if(this->cdf[i] <= p && p < this->cdf[i + 1])
-            return {i >> 1, i % 2};
+        if (this->cdf[i] <= p && p < this->cdf[i + 1])
+            return {i >> 1, i % 2 == 0 ? 1 : -1};
     }
 
-    return {0, 0};
+    return {D-1, -1};
 }
 
-template<std::size_t D>
-inline std::size_t RandomWalk<D>::walkWhile(
+template <std::size_t D>
+inline int RandomWalk<D>::walkWhile(
     std::function<bool(Point<int, D>)> boundary,
     std::size_t max_iter)
 {
-    if(max_iter == -1)
+    if (max_iter == -1)
         max_iter = 100000;
 
     Point<int, D> pt(0);
-    std::size_t time = 0;
-    while(time < max_iter && !boundary(pt))
+    int time = 0;
+    while (time < max_iter && !boundary(pt))
     {
         time++;
-        Point<std::size_t, 2> dir = this->random_direction();
-        std::size_t dim = dir[0];
-        int sgn = dir[1] == 0 ? 1 : -1;
-        pt[dim] += sgn * dx[dim];
+        auto dir = this->random_direction();
+        pt[dir.first] += dir.second * dx[dir.first];
     }
 
-    return time;
+    return boundary(pt) ? time : -1;
 }
 
-template<std::size_t D>
-inline std::vector<std::size_t> RandomWalk<D>::walkWhileSample(
+template <std::size_t D>
+inline std::vector<int> RandomWalk<D>::walkWhileSample(
     std::size_t sample_size,
     std::function<bool(Point<int, D>)> boundary,
     std::size_t max_iter)
 {
-    std::vector<std::size_t> times(sample_size, 0);
+    std::vector<int> times(sample_size, 0);
 
-    for(int k = 0; k < sample_size; k++)
+    for (int k = 0; k < sample_size; k++)
         times[k] = this->walkWhile(boundary, max_iter);
 
     return times;

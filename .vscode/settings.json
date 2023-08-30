@@ -93,6 +93,10 @@
         "memory_resource": "cpp",
         "source_location": "cpp",
         "utility": "cpp",
-        "stop_token": "cpp"
+        "stop_token": "cpp",
+        "__verbose_abort": "cpp",
+        "charconv": "cpp",
+        "format": "cpp",
+        "span": "cpp"
     }
 }
